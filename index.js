@@ -349,10 +349,25 @@ bot.on('callback_query', async (query) => {
         chat_id: chatId, message_id: query.message.message_id
       });
     } catch {}
-    await bot.sendMessage(chatId,
-      `✅ <b>Obuna tasdiqlandi!</b>${bonusText}\n\n💰 Joriy balingiz: <b>${user.balance} ball</b>\n\n👇 Menyudan foydalaning:`,
-      { parse_mode: 'HTML', ...mainMenu() }
-    );
+
+    if (user.phone) {
+      await bot.sendMessage(chatId,
+        `✅ <b>Obuna tasdiqlandi!</b>${bonusText}\n\n💰 Joriy balingiz: <b>${user.balance} ball</b>\n\n👇 Menyudan foydalaning:`,
+        { parse_mode: 'HTML', ...mainMenu() }
+      );
+    } else {
+      await bot.sendMessage(chatId,
+        `✅ <b>Obuna tasdiqlandi!</b>${bonusText}\n\n📱 Endi telefon raqamingizni ulashing:`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            keyboard: [[{ text: '📱 Kontakt ulashish', request_contact: true }]],
+            resize_keyboard: true,
+            one_time_keyboard: true,
+          }
+        }
+      );
+    }
     return;
   }
 
@@ -561,7 +576,7 @@ bot.on('message', async (msg) => {
       } else {
         if (targetUser.balance < amount) {
           await bot.sendMessage(chatId,
-            `❌ Foydalanuvchida faqat <b>${targetUser.balance} ball</b> bor. ${amount} ayirib bo'lmaydi.`,
+            `❌ Foydalanuvchida faqat <b>${targetUser.balance} ball</b> mavjud. ${amount} ayirib bo'lmaydi.`,
             { parse_mode: 'HTML', ...adminMenu() }
           );
           return;
@@ -582,6 +597,47 @@ bot.on('message', async (msg) => {
       return;
     }
   }
+});
+
+
+// ─── Kontakt qabul qilish ─────────────────────────────────────────────────────
+bot.on('message', async (msg) => {
+  if (!msg.contact) return;
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  // Faqat o'zining kontaktini qabul qilish
+  if (msg.contact.user_id !== userId) {
+    await bot.sendMessage(chatId,
+      "❌ Iltimos, faqat o'z telefon raqamingizni yuboring.",
+      { reply_markup: { keyboard: [[{ text: '📱 Kontakt ulashish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } }
+    );
+    return;
+  }
+
+  const phone = msg.contact.phone_number;
+
+  // +998 bilan boshlanishini tekshirish
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  if (!cleanPhone.startsWith('+998') && !cleanPhone.startsWith('998')) {
+    await bot.sendMessage(chatId,
+      "🚫 <b>Kechirasiz, botdan faqat O'zbekiston fuqarolari foydalanishi mumkin.</b>\n\nSizning raqamingiz O'zbekiston raqami emas.",
+      { parse_mode: 'HTML', reply_markup: { remove_keyboard: true } }
+    );
+    return;
+  }
+
+  // Raqamni saqlash
+  const user = await User.findOne({ telegramId: userId });
+  if (!user) { await bot.sendMessage(chatId, 'Iltimos /start ni bosing.'); return; }
+
+  user.phone = cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone;
+  await user.save();
+
+  await bot.sendMessage(chatId,
+    `✅ <b>Telefon raqamingiz saqlandi!</b>\n📞 ${user.phone}\n\n👇 Menyudan foydalaning:`,
+    { parse_mode: 'HTML', ...mainMenu() }
+  );
 });
 
 bot.on('polling_error', (err) => console.error('Polling xato:', err.message));
