@@ -277,9 +277,9 @@ bot.onText(/🎁 Ball ishlash/, async (msg) => {
       reply_markup: {
         inline_keyboard: [[
           {
-  text: "📤 Do'stlarga ulashish",
-  url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("🎓 IELTS Zone Fergana botiga qo'shiling!")}`
-}
+            text: "📤 Do'stlarga ulashish",
+            url: `https://t.me/share/url?url=${encodeURIComponent("🎓 IELTS Zone Fergana botiga qo'shiling!")}&text=${encodeURIComponent(refLink)}`
+          }
         ]]
       }
     }
